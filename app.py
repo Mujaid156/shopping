@@ -1,19 +1,25 @@
+# Mujaid Kariem
+# Class 2
+
+# Importing libraries
 import hmac
 import sqlite3
-import datetime
 
 from flask import Flask, request, jsonify
 from flask_jwt import JWT, jwt_required, current_identity
 from flask_cors import CORS
 from flask_mail import Mail, Message
+from smtplib import SMTPRecipientsRefused
 
+# Start flask application
 app = Flask(__name__)
+# Email configuration
 CORS(app)
 app.config['SECRET_KEY'] = 'super-secret'
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
-app.config['MAIL_USERNAME'] = 'lifechoices147@gmail.com'
-app.config['MAIL_PASSWORD'] = 'lifechoices2021'
+app.config['MAIL_USERNAME'] = 'lifeacademy146@gmail.com'
+app.config['MAIL_PASSWORD'] = '08062021'
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
 mail = Mail(app)
@@ -26,6 +32,7 @@ class User(object):
         self.password = password
 
 
+# Adding data to the user table
 def fetch_users():
     with sqlite3.connect('shopping.db') as conn:
         cursor = conn.cursor()
@@ -43,6 +50,7 @@ def fetch_users():
 users = fetch_users()
 
 
+# Creating the user table and giving it values
 def register_user_table():
     conn = sqlite3.connect('shopping.db')
     print("Database opened successfully.")
@@ -67,6 +75,7 @@ class Cart(object):
         self.price_total = price_total
 
 
+# Adding products to the store table
 def fetch_products():
     with sqlite3.connect('shopping.db') as conn:
         cursor = conn.cursor()
@@ -80,6 +89,7 @@ def fetch_products():
     return new_data
 
 
+# Creating the store table and giving it values
 def product_table():
     conn = sqlite3.connect('shopping.db')
     print("Database opened successfully.")
@@ -102,6 +112,7 @@ user_table = {u.username: u for u in users}
 userid_table = {u.id: u for u in users}
 
 
+# To get an access token
 def authenticate(first_name, password):
     user = user_table.get(first_name, None)
     if user and hmac.compare_digest(user.password.encode('utf-8'), password.encode('utf-8')):
@@ -116,40 +127,48 @@ def identity(payload):
 jwt = JWT(app, authenticate, identity)
 
 
+# Route to get an access token
 @app.route('/protected')
 @jwt_required()
 def protected():
     return '%s' % current_identity
 
 
+# Route to register users and send an email
 @app.route('/user-registration/', methods=["POST"])
 def user_registration():
     response = {}
 
-    if request.method == "POST":
+    try:
+        if request.method == "POST":
 
-        username = request.form['first_name']
-        last_name = request.form['last_name']
-        email = request.form['email']
-        password = request.form['password']
+            username = request.form['first_name']
+            last_name = request.form['last_name']
+            email = request.form['email']
+            password = request.form['password']
 
-        with sqlite3.connect("shopping.db") as conn:
-            cursor = conn.cursor()
-            cursor.execute("INSERT INTO user("
-                           "first_name,"
-                           "last_name,"
-                           "email,"
-                           "password) VALUES(?, ?, ?, ?)", (username, last_name, email, password))
-            conn.commit()
-            response["Message"] = "User registered successfully."
-            response["Status_code"] = 201
-            msg = Message('Hello ' + username, sender='lifechoices147@gmail.com',
-                          recipients=[email])
-            msg.body = 'Thank you for registering with Checkers.'
-            mail.send(msg)
+            with sqlite3.connect("shopping.db") as conn:
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO user("
+                                "first_name,"
+                                "last_name,"
+                                "email,"
+                                "password) VALUES(?, ?, ?, ?)", (username, last_name, email, password))
+                conn.commit()
+                response["Message"] = "User registered successfully."
+                response["Status_code"] = 201
+                msg = Message('Hello ' + username, sender='lifeacademy146@gmail.com',
+                            recipients=[email])
+                msg.body = 'Thank you for registering with Checkers.'
+                mail.send(msg)
+            return response
+    except SMTPRecipientsRefused:
+        response["Message"] = "Invalid email used."
+        response["Status_code"] = 400
         return response
 
 
+# Route to get an user info
 @app.route('/user-info/<int:user_id>', methods=["GET"])
 def user_info(user_id):
     response = {}
@@ -164,35 +183,41 @@ def user_info(user_id):
     return jsonify(response)
 
 
+# Route to add items to store table
 @app.route('/products/', methods=["POST"])
 def products():
     response = {}
 
-    if request.method == "POST":
+    try:
 
-        product_name = request.form['product_name']
-        product_type = request.form['product_type']
-        description = request.form['description']
-        product_quantity = request.form['product_quantity']
-        product_price = request.form['product_price']
-        price_total = int(product_price) * int(product_quantity)
+        if request.method == "POST":
 
-        with sqlite3.connect("shopping.db") as conn:
-            cursor = conn.cursor()
-            cursor.execute("INSERT INTO store("
-                           "product_name,"
-                           "product_type,"
-                           "description,"
-                           "product_quantity,"
-                           "product_price,"
-                           "price_total) VALUES(?, ?, ?, ?, ?, ?)",
-                           (product_name, product_type, description, product_quantity, product_price, price_total))
-            conn.commit()
-            response["Message"] = "Product added successfully."
-            response["Status_code"] = 201
-        return response
+            product_name = request.form['product_name']
+            product_type = request.form['product_type']
+            description = request.form['description']
+            product_quantity = request.form['product_quantity']
+            product_price = request.form['product_price']
+            price_total = int(product_price) * int(product_quantity)
+
+            with sqlite3.connect("shopping.db") as conn:
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO store("
+                            "product_name,"
+                            "product_type,"
+                            "description,"
+                            "product_quantity,"
+                            "product_price,"
+                            "price_total) VALUES(?, ?, ?, ?, ?, ?)",
+                            (product_name, product_type, description, product_quantity, product_price, price_total))
+                conn.commit()
+                response["Message"] = "Product added successfully."
+                response["Status_code"] = 201
+            return response
+    except Exception as e:
+        return e
 
 
+# Route to get an item from store table
 @app.route('/get-products/<int:item_id>', methods=["GET"])
 def get_products(item_id):
     response = {}
@@ -207,6 +232,7 @@ def get_products(item_id):
     return jsonify(response)
 
 
+# Route to get all items from store table
 @app.route('/show-products/', methods=["GET"])
 def show_products():
     response = {}
@@ -221,6 +247,7 @@ def show_products():
     return jsonify(response)
 
 
+# Route to update items in store table
 @app.route('/update-products/<int:item_id>', methods=["PUT"])
 @jwt_required()
 def update_products(item_id):
@@ -230,7 +257,7 @@ def update_products(item_id):
         with sqlite3.connect('shopping.db') as conn:
             incoming_data = dict(request.json)
             put_data = {}
-
+            # To update item quantity
             if incoming_data.get("product_quantity") is not None:
                 put_data["product_quantity"] = incoming_data.get("product_quantity")
                 with sqlite3.connect('shopping.db') as conn:
@@ -239,6 +266,7 @@ def update_products(item_id):
                     conn.commit()
                     response['Message'] = "Product quantity updated was successful."
                     response['Status_code'] = 200
+            # To update item price
             if incoming_data.get("product_price") is not None:
                 put_data["product_price"] = incoming_data.get("product_price")
                 with sqlite3.connect('shopping.db') as conn:
@@ -250,6 +278,7 @@ def update_products(item_id):
     return response
 
 
+# Route to remove item from store table
 @app.route("/remove-item/<int:item_id>")
 def remove_item(item_id):
     response = {}
