@@ -192,11 +192,11 @@ def products():
 
         if request.method == "POST":
 
-            product_name = request.form['product_name']
-            product_type = request.form['product_type']
-            description = request.form['description']
-            product_quantity = request.form['product_quantity']
-            product_price = request.form['product_price']
+            product_name = request.json['product_name']
+            product_type = request.json['product_type']
+            description = request.json['description']
+            product_quantity = request.json['product_quantity']
+            product_price = request.json['product_price']
             price_total = int(product_price) * int(product_quantity)
 
             with sqlite3.connect("shopping.db") as conn:
